@@ -215,7 +215,9 @@ class Trainer:
             acc_table_ssl = []
             self.reset_cluster_labels = True
             for j in range(i+1):
-                acc_table.append(self.task_eval(j))
+                task_acc = self.task_eval(j)
+                acc_table.append(task_acc)
+                print(f"Task {j} acc: {task_acc:.2f}")
             temp_table['acc'].append(np.mean(np.asarray(acc_table)))
 
             # save temporary acc results
