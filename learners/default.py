@@ -180,9 +180,9 @@ class NormalNN(nn.Module):
                     self.model.train()
 
                     # send data to gpu
-                    if self.gpu:
-                        x = x.cuda()
-                        y = y.cuda()
+
+                    x = x.cuda()
+                    y = y.cuda()
                     
                     # model update
                     if self.config['learner_name'] == 'OVAPrompt' and task[0] > 0:
