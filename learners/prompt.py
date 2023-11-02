@@ -56,6 +56,7 @@ class Prompt(NormalNN):
         if task != None:
             for i in self.mem_ova.keys():
                 x_old, y_old = self.mem_raw[i]
+                x_old, y_old = x_old.cuda(), y_old.cuda()
                 logits_old, prompt_loss_old, _, _ = self.model(x_old, train=True, get_latent=True)
                 logits_old = logits_old[:,:self.valid_out_dim]
                 dw_cls_old = self.dw_k[-1 * torch.ones(y_old.size()).long()]
