@@ -4,9 +4,9 @@ other_split_size: 10
 schedule:
 - 20
 schedule_type: cosine
-batch_size: 64
+batch_size: 32
 optimizer: Adam
-lr: 0.001
+lr: 0.00025
 momentum: 0.9
 weight_decay: 0
 model_type: zoo
