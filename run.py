@@ -44,7 +44,6 @@ def create_args():
     
     # OVA loss args
     parser.add_argument('--lambOVA', type=float, default=1, help="size of memory for replay")
-    parser.add_argument('--mem_per_task', type=int, default=100, help="size of memory for replay")
     
     # Ortho prj:
     parser.add_argument('--maml_e', type=int, default=5, help="size of memory for replay")

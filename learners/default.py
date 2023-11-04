@@ -23,7 +23,7 @@ import PIL.Image
 from torchvision.transforms import ToTensor
 import pandas as pd
 from scipy.stats import wasserstein_distance
-#import ot
+import ot
 
 import sklearn
 from sklearn.manifold import TSNE
@@ -180,9 +180,9 @@ class NormalNN(nn.Module):
                     self.model.train()
 
                     # send data to gpu
-
-                    x = x.cuda()
-                    y = y.cuda()
+                    if self.gpu:
+                        x = x.cuda()
+                        y = y.cuda()
                     
                     # model update
                     if self.config['learner_name'] == 'OVAPrompt' and task[0] > 0:
@@ -257,7 +257,6 @@ class NormalNN(nn.Module):
             
             if iter % 100 == 0:
                 print('OVA loss: ', ova_loss.item())
-
             
     def criterion(self, logits, targets, data_weights):
         loss_supervised = (self.criterion_fn(logits, targets.long()) * data_weights).mean()
@@ -331,12 +330,10 @@ class NormalNN(nn.Module):
         
         return total_loss.detach(), logits, latent
     
-    def update_mem_ova(self, latent, targets, task, num_samples=10): #numsample per class
-        num_samples = self.config['mem_per_task']
+    def update_mem_ova(self, latent, targets, task, num_samples=50): #numsample per class
         self.mem_ova[int(task[0])] = (latent[:num_samples].detach(), targets[:num_samples].detach())
 
-    def update_mem_raw(self, sample, targets, task, num_samples=10):
-        num_samples = self.config['mem_per_task']
+    def update_mem_raw(self, sample, targets, task, num_samples=50):
         self.mem_raw[int(task[0])] = (sample[:num_samples].cpu(), targets[:num_samples].cpu())
         
     def update_mem_q(self, q, targets, task, num_samples=1600):
@@ -366,6 +363,8 @@ class NormalNN(nn.Module):
             self.main_centroids = self.model.module.last.weight.data
         except:
             self.main_centroids = self.model.last.weight.data
+        
+        # print(features.shape, labels.shape)
         self.viz_cluster(features, labels)
         
         
@@ -397,6 +396,11 @@ class NormalNN(nn.Module):
             curr_features = torch.cat((curr_features, latent.detach()), dim=0) 
         curr_labels = [100]*len(curr_features)
         curr_labels = torch.LongTensor(curr_labels)
+        
+        # print("Ws distance... between old and new features:")
+        # # print(wasserstein_distance(old_features.cpu(), curr_features.cpu()))
+        # print(ot.emd(old_features, curr_features, torch.ones(old_features.shape[0], curr_features.shape[0])))
+        
         features = torch.cat((old_features, curr_features), dim=0)
         labels = torch.cat((old_labels, curr_labels), dim=0)
         
@@ -410,9 +414,28 @@ class NormalNN(nn.Module):
         # Create a scatter plot.
         f = plt.figure()
         ax = plt.subplot(aspect='equal')
+        sc = ax.scatter(x[:,0], x[:,1], lw=0, s=100, c=palette[colors.astype(np.int32)])
+        # ax2 = plt.axes()
         
-        sc = ax.scatter(x[:,0], x[:,1],  lw=0, s=100, c=palette[colors.astype(np.int32)])
+        # f = px.scatter_3d(pd.DataFrame(x.reshape(3, -1)), x=0, y=1, z=2,) 
+        
+        # Add the labels for each digit.
         txts = []
+        # for i in colors:
+        #     # Position of each label.
+        #     xtext, ytext = np.mean(x[colors == i, :], axis=0)
+        #     txt = ax.text(xtext, ytext, str(int(i)), fontsize=15)
+        #     txt.set_path_effects([pe.Stroke(linewidth=5, foreground="w"), pe.Normal()])
+        #     txts.append(txt)
+        
+        # for i in colors:
+        #     # Position of each label.
+        #     xtext, ytext = np.mean(x[colors == i, :], axis=0)
+        #     txt = ax.text(xtext, ytext, str(int(i)), fontsize=15)
+        #     txt.set_path_effects([pe.Stroke(linewidth=5, foreground="w"), pe.Normal()])
+        #     txts.append(txt)
+            
+        # sc = ax.scatter(x[data_len:,0], x[data_len:,1], s=80, c='r', marker='x')
         return f, ax, txts
     
     def viz_cluster(self, features, labels, mode2=False): 
@@ -424,18 +447,27 @@ class NormalNN(nn.Module):
                 
         labels_ = np.array(labels_)
         len_data = features.shape[0]
-        data_all = features#[labels%10 == 0]# np.vstack([features, centroids_])
-        label_all = labels#[labels%10 == 0]# np.hstack([labels, labels_])
-        tsneX = TSNE(n_components=2,perplexity=10, init='pca').fit_transform(data_all)
-        f, ax, plt =  self.plot(tsneX, label_all, len_data)
+        data_all = features[labels%10==0]# np.vstack([features, centroids_])
+        label_all = labels[labels%10==0]# np.hstack([labels, labels_])
+        tsneX = TSNE(n_components=2,perplexity=5, init='pca').fit_transform(data_all)
+        f, ax, txt =  self.plot(tsneX, label_all, len_data)
         
         # exp.log_figure(f'InitStep_{args.batch_id}', f)
         save_dir = self.config['log_dir']
         if mode2:
-            f.savefig(f'{save_dir}_Slatent_{self.task_count}.jpg')
+            # f.savefig(f'{save_dir}_Slatent_{self.task_count}.jpg')
+            # f = f.ToTensor()
+            # image = PIL.Image.open(f)
+            # image = ToTensor()(image).unsqueeze(0)
+            # f_grid = torchvision.utils.make_grid(f) ax2
             writer.add_figure(f'{save_dir}_Slatent_{self.task_count}.jpg', f)
         else:
-            f.savefig(f'{save_dir}_latent_{self.task_count}.jpg')
+            # f.savefig(f'{save_dir}_latent_{self.task_count}.jpg')
+            # canvas = f.canvas
+            # ax = f.gca()
+            # canvas.draw() 
+            # image_flat = np.frombuffer(canvas.tostring_rgb(), dtype='uint8') 
+            # image = image_flat.reshape(*reversed(canvas.get_width_height()), 3)
             writer.add_figure(f'{save_dir}_latent_{self.task_count}.jpg', f)
             
         
@@ -509,9 +541,9 @@ class NormalNN(nn.Module):
             
             if task_in is None:
                 output = model.forward(input)[:, :self.valid_out_dim]
-                # if mulOOD != None:
-                #     mulOOD = mulOOD
-                #     output = output * mulOOD[:self.valid_out_dim]
+                if mulOOD != None:
+                    mulOOD = mulOOD
+                    output = output * mulOOD[:self.valid_out_dim]
                     
                 acc = accumulate_acc(output, target, task, acc, topk=(self.top_k,))
             else:

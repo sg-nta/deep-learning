@@ -45,23 +45,12 @@ class Prompt(NormalNN):
         logits = logits[:,:self.valid_out_dim]
 
         # ce with heuristic
-        # logits[:,:self.last_valid_out_dim] = -float('inf') # uncomment --> run as usual
+        logits[:,:self.last_valid_out_dim] = -float('inf')
         dw_cls = self.dw_k[-1 * torch.ones(targets.size()).long()]
         total_loss = self.criterion(logits, targets.clone().long(), dw_cls)
 
         # ce loss
         total_loss = total_loss + prompt_loss.sum()
-        
-        #loss_old:
-        if task != None:
-            for i in self.mem_ova.keys():
-                x_old, y_old = self.mem_raw[i]
-                x_old, y_old = x_old.cuda(), y_old.cuda()
-                logits_old, prompt_loss_old, _, _ = self.model(x_old, train=True, get_latent=True)
-                logits_old = logits_old[:,:self.valid_out_dim]
-                dw_cls_old = self.dw_k[-1 * torch.ones(y_old.size()).long()]
-                total_loss += self.criterion(logits_old, y_old.cuda(), dw_cls_old)
-                total_loss += prompt_loss_old.sum()
 
         # step
         self.optimizer.zero_grad()

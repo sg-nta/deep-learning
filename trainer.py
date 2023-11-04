@@ -125,7 +125,6 @@ class Trainer:
                         'learner_name': args.learner_name,
                         'maml_e': args.maml_e,
                         'lambOVA': args.lambOVA,
-                        'mem_per_task': args.mem_per_task,
                         }
         self.learner_type, self.learner_name = args.learner_type, args.learner_name
         self.learner = learners.__dict__[self.learner_type].__dict__[self.learner_name](self.learner_config)
@@ -215,9 +214,7 @@ class Trainer:
             acc_table_ssl = []
             self.reset_cluster_labels = True
             for j in range(i+1):
-                task_acc = self.task_eval(j)
-                acc_table.append(task_acc)
-                print(f"Task {j} acc: {task_acc:.2f}")
+                acc_table.append(self.task_eval(j))
             temp_table['acc'].append(np.mean(np.asarray(acc_table)))
 
             # save temporary acc results
