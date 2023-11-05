@@ -330,7 +330,7 @@ class NormalNN(nn.Module):
         
         return total_loss.detach(), logits, latent
     
-    def update_mem_ova(self, latent, targets, task, num_samples=50): #numsample per class
+    def update_mem_ova(self, latent, targets, task, num_samples=100): #numsample per class
         self.mem_ova[int(task[0])] = (latent[:num_samples].detach(), targets[:num_samples].detach())
 
     def update_mem_raw(self, sample, targets, task, num_samples=50):
